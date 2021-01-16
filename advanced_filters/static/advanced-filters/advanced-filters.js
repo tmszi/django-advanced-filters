@@ -37,7 +37,8 @@ var OperatorHandlers = function($) {
 		$(".hasDatepicker").datepicker("destroy");
 		$from.addClass('vDateField');
 		$to.addClass('vDateField');
-		grappelli.initDateAndTimePicker();
+		// init jQuery datepicker
+		$(".query-dt-from, .query-dt-to").datepicker();
 	};
 
 	self.remove_datepickers = function() {
@@ -166,4 +167,4 @@ var OperatorHandlers = function($) {
 			_af_handlers.init();
 		}
 	});
-})(window._jq || jQuery);
+})(window._jq || window.jQuery);
