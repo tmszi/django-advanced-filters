@@ -72,6 +72,7 @@
 					// using django's original jquery, initial formset
 					var FORM_MODEL = undefined;
 					var MODEL_LABEL = '{{ app_label }}.{{ opts.model_name }}';
+					var FILTER_FIELDS_OPERATORS = '{{ advanced_filters.filter_fields_operators }}';
 					(function($) {
 						$.magnificPopup.instance._onFocusIn = function(e) {
 							// Do nothing if target element is select2 input

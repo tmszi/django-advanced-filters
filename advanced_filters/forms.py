@@ -1,7 +1,9 @@
+import copy
 from datetime import datetime as dt
-from pprint import pformat
+import json
 import logging
 import operator
+from pprint import pformat
 
 from django import forms
 
@@ -15,6 +17,7 @@ from django.db.models import Q
 from django.db.models.fields import DateField
 from django.forms.formsets import formset_factory, BaseFormSet
 from django.utils.functional import cached_property
+from django.utils.safestring import SafeString
 from django.utils.translation import ugettext_lazy as _
 from six.moves import range, reduce
 from django.utils.text import capfirst
@@ -56,18 +59,23 @@ class AdvancedFilterQueryForm(CleanWhiteSpacesMixin, forms.Form):
         ("lte", _("Less Than or Equal To")),
         ("gte", _("Greater Than or Equal To")),
     )
+    FIELD_OPERATORS = ()
 
     FIELD_CHOICES = (
-        ("_OR", _("Or (mark an or between blocks)")),
+        (_('Operators'), (
+            ("_OR", _("Or (mark an or between blocks)")),
+            ("_AND", _("And (mark an and between blocks)")),
+        )
+        ),
     )
 
     field = forms.ChoiceField(required=True, widget=forms.Select(
         attrs={'class': 'query-field'}), label=_('Field'))
     operator = forms.ChoiceField(
         label=_('Operator'),
-        required=True, choices=OPERATORS, initial="iexact",
-        widget=forms.Select(attrs={'class': 'query-operator'}))
-    value = VaryingTypeCharField(required=True, widget=forms.TextInput(
+        required=True, choices=OPERATORS,
+        initial="iexact", widget=forms.Select(attrs={'class': 'query-operator'}))
+    value = VaryingTypeCharField(required=False, widget=forms.TextInput(
         attrs={'class': 'query-value'}), label=_('Value'))
     value_from = forms.DateTimeField(widget=forms.HiddenInput(
         attrs={'class': 'query-dt-from'}), required=False)
@@ -79,10 +87,23 @@ class AdvancedFilterQueryForm(CleanWhiteSpacesMixin, forms.Form):
         """
         Iterate over passed model fields tuple and update initial choices.
         """
-        return tuple(sorted(
-            [(fquery, capfirst(fname)) for fquery, fname in fields.items()],
-            key=lambda f: f[1].lower())
-        ) + self.FIELD_CHOICES
+        group = []
+        result = []
+        for fquery, fname in fields.items():
+            if 'grp' in fquery:
+                if group:
+                    group[1].sort(key=lambda tup: tup[1])
+                    result.append(group)
+                    group = (capfirst(fname), [])
+                else:
+                    group = (capfirst(fname), [])
+            else:
+                if group:
+                    group[1].append((fquery, capfirst(fname)))
+        if group:
+            group[1].sort(key=lambda tup: tup[1])
+            result.append(group)
+        return tuple(result) + self.FIELD_CHOICES
 
     def _build_query_dict(self, formdata=None):
         """
@@ -93,7 +114,7 @@ class AdvancedFilterQueryForm(CleanWhiteSpacesMixin, forms.Form):
             formdata = self.cleaned_data
         key = "{field}__{operator}".format(**formdata)
         if formdata['operator'] == "isnull":
-            return {key: None}
+            return {key: True}
         elif formdata['operator'] == "istrue":
             return {formdata['field']: True}
         elif formdata['operator'] == "isfalse":
@@ -101,12 +122,58 @@ class AdvancedFilterQueryForm(CleanWhiteSpacesMixin, forms.Form):
         return {key: formdata['value']}
 
     @staticmethod
+    def _get_computed_fields_choices(fields):
+        result = {}
+        for field, _filter in fields.items():
+            values = []
+            for v in _filter.lookups(None, None, None):
+                values.append({'id': v[1],  'text': v[1]})
+                result[field] = values
+        return SafeString(json.dumps(result))
+
+    @staticmethod
+    def _validate_field_operators(fields):
+        """Validate field operators
+
+        :param dict fields: filter fields with operators
+        """
+        _fields = copy.deepcopy(fields)
+        # New operators range for first field
+        for i, f in enumerate(_fields.items()):
+            field_name, operators = f
+            _operators = list(_fields[field_name])
+            for operator in operators:
+                # Remove not supported operator
+                if not any(operator in i for i in
+                           AdvancedFilterQueryForm.OPERATORS):
+                    _operators.remove(operator)
+                    _fields[field_name] = tuple(_operators)
+                else:
+                    index = _operators.index(operator)
+                    _operators[index] = [
+                        (operator, str(i[1])) for i in
+                        AdvancedFilterQueryForm.OPERATORS
+                        if i[0] == operator
+                    ][0]
+                    _fields[field_name] = tuple(_operators)
+
+            if not operators:
+                def_operators = list(AdvancedFilterQueryForm.OPERATORS)
+                for o in def_operators:
+                    index = def_operators.index(o)
+                    def_operators[index] = (
+                        o[0], str(o[1]),
+                    )
+                _fields[field_name] = def_operators
+        return SafeString(json.dumps(_fields))
+
+    @staticmethod
     def _parse_query_dict(query_data, model):
         """
         Take a list of query field dict and return data for form initialization
         """
         operator = 'iexact'
-        if query_data['field'] == '_OR':
+        if query_data['field'] in ('_OR', '_AND'):
             query_data['operator'] = operator
             return query_data
 
@@ -121,6 +188,7 @@ class AdvancedFilterQueryForm(CleanWhiteSpacesMixin, forms.Form):
                 field = query_data['field']
 
         query_data['field'] = field
+
         mfield = get_fields_from_path(model, query_data['field'])
         if not mfield:
             raise Exception('Field path "%s" could not be followed to a field'
@@ -168,6 +236,17 @@ class AdvancedFilterQueryForm(CleanWhiteSpacesMixin, forms.Form):
                     'value_to' in cleaned_data):
                 self.set_range_value(cleaned_data)
         return cleaned_data
+
+    def clean_value(self):
+        from django.core.exceptions import ValidationError
+        data = self.cleaned_data.get('value')
+        operator = self.cleaned_data.get('operator')
+        if operator and operator not in ('isnull', 'istrue', 'isfalse') and not data:
+            raise ValidationError(_('This field is required'))
+
+        # Always return a value to use as the new cleaned data, even if
+        # this method didn't change it.
+        return data
 
     def make_query(self, *args, **kwargs):
         """ Returns a Q object from the submitted form """
@@ -253,19 +332,40 @@ class AdvancedFilterForm(CleanWhiteSpacesMixin, forms.ModelForm):
         purposes.
         """
         model_fields = {}
+        group_index = 0
         for field in fields:
             if isinstance(field, tuple) and len(field) == 2:
-                field, verbose_name = field[0], field[1]
+                _field, verbose_name = field[0], field[1]
+                model_fields[_field] = verbose_name
+            elif isinstance(field, tuple) and len(field) > 1:
+                for index, subfield in enumerate(field):
+                    if index == 0:
+                        model_fields[f"grp{group_index}"] = str(subfield)
+                        group_index += 1
+                    else:
+                        if isinstance(subfield, tuple) and len(subfield) == 2:
+                            _field, verbose_name = subfield[0], subfield[1]
+                            model_fields[_field] = verbose_name
+                        else:
+                            try:
+                                model_field = get_fields_from_path(model, subfield)[-1]
+                                verbose_name = model_field.verbose_name
+                                model_fields[subfield] = verbose_name
+                            except (FieldDoesNotExist, IndexError, TypeError) as e:
+                                logger.warning(
+                                    "AdvancedFilterForm: skip invalid field - %s", e
+                                )
+                                continue
             else:
                 try:
                     model_field = get_fields_from_path(model, field)[-1]
                     verbose_name = model_field.verbose_name
+                    model_fields[field] = verbose_name
                 except (FieldDoesNotExist, IndexError, TypeError) as e:
                     logger.warning(
                         "AdvancedFilterForm: skip invalid field - %s", e
                     )
                     continue
-            model_fields[field] = verbose_name
         return model_fields
 
     def __init__(self, *args, **kwargs):
@@ -290,6 +390,11 @@ class AdvancedFilterForm(CleanWhiteSpacesMixin, forms.ModelForm):
         self._filter_fields = filter_fields or getattr(
             model_admin, 'advanced_filter_fields', ())
 
+        self.filter_fields_operators = \
+            AdvancedFilterQueryForm._validate_field_operators(
+                fields=getattr(model_admin,
+                               'advanced_filter_fields_operators', {})
+            )
         super(AdvancedFilterForm, self).__init__(*args, **kwargs)
 
         # populate existing or empty forms formset
@@ -328,15 +433,19 @@ class AdvancedFilterForm(CleanWhiteSpacesMixin, forms.ModelForm):
         for form in self._non_deleted_forms:
             if not hasattr(form, 'cleaned_data'):
                 continue
-            if form.cleaned_data['field'] == "_OR":
+            if form.cleaned_data['field'] in ('_OR', '_AND'):
                 ORed.append(query)
                 query = Q()
+                if form.cleaned_data['field'] == '_OR':
+                    _operator = operator.or_
+                elif form.cleaned_data['field'] == '_AND':
+                    _operator = operator.and_
             else:
                 query = query & form.make_query()
         if ORed:
             if query:  # add last query for OR if any
                 ORed.append(query)
-            query = reduce(operator.or_, ORed)
+            query = reduce(_operator, ORed)
         return query
 
     def initialize_form(self, instance, model, data=None, extra=None):
@@ -354,7 +463,7 @@ class AdvancedFilterForm(CleanWhiteSpacesMixin, forms.ModelForm):
         self.fields_formset = formset(
             data=data,
             initial=forms or None,
-            model_fields=model_fields
+            model_fields=model_fields,
         )
 
     def save(self, commit=True):

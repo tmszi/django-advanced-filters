@@ -58,6 +58,7 @@
 					// using django's original jquery, initial formset
 					var FORM_MODEL = '{% if adminform %}{{ adminform.form.instance.model }}{% endif %}';
 					var MODEL_LABEL = '{{ app_label }}.{{ opts.model_name }}';
+					var FILTER_FIELDS_OPERATORS = '{{ adminform.form.filter_fields_operators }}';
 				</script>
 
 				{% include "admin/common_js_init.html" with formset=formset %}

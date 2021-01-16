@@ -63,6 +63,18 @@ var OperatorHandlers = function($) {
 		}
 	};
 
+	self.load_field_operators = function(op) {
+		// pick a widget for the value field according field_operators to operator
+		var operators = JSON.parse(FILTER_FIELDS_OPERATORS);
+		var field_operators = operators[$(self.selected_field_elm).val()];
+		if (field_operators.length) {
+			op.empty();
+			$.each(field_operators, function (key, operator) {
+				op.append($('<option></option>').attr('value', operator[0]).text(operator[1]));
+			}
+		)}
+	};
+
 	self.initialize_select2 = function(elm) {
 		// initialize select2 widget and populate field choices
 		var field = $(elm).val();
@@ -72,8 +84,8 @@ var OperatorHandlers = function($) {
 		input.select2("destroy");
 		$.get(choices_url, function(data) {
 			input.select2({'data': data, 'createSearchChoice': function(term) {
-                return { 'id': term, 'text': term };
-            }});
+			return { 'id': term, 'text': term };
+			}});
 		});
 	};
 
@@ -82,7 +94,7 @@ var OperatorHandlers = function($) {
 		var row = $(elm).parents('tr');
 		var op = row.find('.query-operator');
 		var value = row.find('.query-value');
-		if ($(elm).val() == "_OR") {
+		if ($(elm).val() == "_OR" || $(elm).val() == "_AND" ) {
 			op.val("iexact").prop("disabled", true);
 			value.val("null").prop("disabled", true);
 			op.after('<input type="hidden" value="' + op.val() +
@@ -98,6 +110,7 @@ var OperatorHandlers = function($) {
 				value.val("");
 			}
 			op.val("iexact").change();
+			self.load_field_operators(op);
 			self.initialize_select2(elm);
 		}
 	};
@@ -118,7 +131,7 @@ var OperatorHandlers = function($) {
 			}).change();
 			self.modify_widget(this);
 		});
-		$('.form-row select.query-field').each(function() {
+		$('.form-row.dynamic-form select.query-field').each(function(row) {
 			$(this).off("change");
 			$(this).data('pre_change', $(this).val());
 			$(this).on("change", function() {
