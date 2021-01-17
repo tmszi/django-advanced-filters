@@ -34,6 +34,7 @@ class AdvancedFilter(models.Model):
 
     b64_query = models.CharField(max_length=2048)
     model = models.CharField(max_length=64, blank=True, null=True)
+    delete = models.BooleanField(null=False, default=False)
 
     @property
     def query(self):

@@ -39,7 +39,11 @@ class AdvancedListFilters(admin.SimpleListFilter):
                 return queryset
             query = advfilter.query
             logger.debug(query.__dict__)
-            return queryset.filter(query).distinct()
+            queryset = queryset.filter(query).distinct()
+            # don't save filter (filter only, Filter button)
+            if advfilter.delete:
+                filters.delete()
+            return queryset
         return queryset
 
 
@@ -63,13 +67,17 @@ class AdminAdvancedFiltersMixin(object):
             afilter = form.save(commit=False)
             afilter.created_by = request.user
             afilter.query = form.generate_query()
+            if'_filter_goto' in (request.GET or request.POST):
+                afilter.delete = True
             afilter.save()
             afilter.users.add(request.user)
             messages.add_message(
                 request, messages.SUCCESS,
                 _('Advanced filter added successfully.')
             )
-            if '_save_goto' in (request.GET or request.POST):
+
+            if ('_save_goto' in (request.GET or request.POST) or
+                '_filter_goto' in (request.GET or request.POST)):
                 url = "{path}{qparams}".format(
                     path=request.path, qparams="?_afilter={id}".format(
                         id=afilter.id))
@@ -124,7 +132,7 @@ class AdvancedFilterAdmin(admin.ModelAdmin):
     def change_view(self, request, object_id, form_url='', extra_context=None):
         orig_response = super(AdvancedFilterAdmin, self).change_view(
             request, object_id, form_url, extra_context)
-        if '_save_goto' in request.POST:
+        if '_save_goto' in request.POST or '_filter_goto' in request.POST:
             obj = self.get_object(request, unquote(object_id))
             if obj:
                 app, model = obj.model.split('.')
