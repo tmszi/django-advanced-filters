@@ -214,7 +214,6 @@ class AdvancedFilterQueryForm(CleanWhiteSpacesMixin, forms.Form):
             date_from = date_to_string(query_data.get('value_from'))
             date_to = date_to_string(query_data.get('value_to'))
             query_data['value'] = ','.join([date_from, date_to])
-
         return query_data
 
     def set_range_value(self, data):
@@ -309,7 +308,9 @@ class AdvancedFilterForm(CleanWhiteSpacesMixin, forms.ModelForm):
 
     class Media:
         required_js = [
-            'admin/js/%sjquery.min.js' % ('vendor/jquery/' if USE_VENDOR_DIR else ''),
+            # 'admin/js/%sjquery.min.js' % ('vendor/jquery/' if USE_VENDOR_DIR else ''),
+            'admin_tools/js/jquery/jquery.min.js',
+            'jquery-ui/jquery-ui.min.js',
             'advanced-filters/jquery_adder.js',
             'orig_inlines%s.js' % ('' if settings.DEBUG else '.min'),
             'magnific-popup/jquery.magnific-popup.js',
