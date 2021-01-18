@@ -312,6 +312,8 @@ class AdvancedFilterForm(CleanWhiteSpacesMixin, forms.ModelForm):
             'admin_tools/js/jquery/jquery.min.js',
             'jquery-ui/jquery-ui.min.js',
             'advanced-filters/jquery_adder.js',
+            'jqueryui-timepicker-addon/dist/jquery-ui-sliderAccess.js',
+            'jqueryui-timepicker-addon/dist/jquery-ui-timepicker-addon.js',
             'orig_inlines%s.js' % ('' if settings.DEBUG else '.min'),
             'magnific-popup/jquery.magnific-popup.js',
             'advanced-filters/advanced-filters.js',
@@ -319,6 +321,8 @@ class AdvancedFilterForm(CleanWhiteSpacesMixin, forms.ModelForm):
         js = required_js + [SELECT2_JS]
         css = {'screen': [
             SELECT2_CSS,
+            'jquery-ui/themes/base/jquery-ui.min.css',
+            'jqueryui-timepicker-addon/dist/jquery-ui-timepicker-addon.min.css',
             'advanced-filters/advanced-filters.css',
             'magnific-popup/magnific-popup.css'
         ]}

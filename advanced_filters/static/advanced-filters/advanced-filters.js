@@ -33,12 +33,16 @@ var OperatorHandlers = function($) {
 			}
 		}
 		self.val_input.css({display: 'none'});
-
-		$(".hasDatepicker").datepicker("destroy");
+		$(".hasDatepicker").datetimepicker("destroy");
 		$from.addClass('vDateField');
 		$to.addClass('vDateField');
-		// init jQuery datepicker
-		$(".query-dt-from, .query-dt-to").datepicker();
+		/* 
+			init jQuery-ui datetime picker
+			https://github.com/trentrichardson/jQuery-Timepicker-Addon
+		*/
+		$(".query-dt-from, .query-dt-to").datetimepicker({
+			dateFormat: 'yy-mm-dd'
+		});
 	};
 
 	self.remove_datepickers = function() {
@@ -56,7 +60,6 @@ var OperatorHandlers = function($) {
 		// pick a widget for the value field according to operator
 		self.value = $(elm).val();
 		self.val_input = $(elm).parents('tr').find('.query-value');
-		console.log("selected operator: " + self.value);
 		if (self.value == "range") {
 			self.add_datepickers();
 		} else {
@@ -167,4 +170,4 @@ var OperatorHandlers = function($) {
 			_af_handlers.init();
 		}
 	});
-})(window._jq || window.jQuery);
+})(window._jq || jQuery);
