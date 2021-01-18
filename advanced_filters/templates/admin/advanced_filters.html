@@ -64,7 +64,7 @@
 					<input method="POST" type="submit" value="{% trans "Save" %}">
 					<input method="POST" name="_save_goto" type="submit" value="{% trans "Save & Filter Now!" %}">
 					<input method="POST" name="_filter_goto" type="submit" value="{% trans "Filter Now!" %}">
-					<a href="#" class="grp-button" style="margin:auto" onclick="window.jQuery.magnificPopup.close();">{% trans "Cancel" %}</a>
+					<a href="#" class="grp-button" style="margin:auto" onclick="jQuery.magnificPopup.close();">{% trans "Cancel" %}</a>
 				</form>
 
 				{{ advanced_filters.media.js }}
@@ -89,7 +89,7 @@
 						if ($(".errorlist", "#advanced_filters").length) {
 							$('.ajax-popup-link').magnificPopup('open');
 						}
-					})(window.jQuery);
+					})(jQuery);
 				</script>
 
 				{% include "admin/common_js_init.html" with formset=formset %}
