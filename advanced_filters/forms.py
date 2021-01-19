@@ -64,7 +64,6 @@ class AdvancedFilterQueryForm(CleanWhiteSpacesMixin, forms.Form):
     FIELD_CHOICES = (
         (_('Operators'), (
             ("_OR", _("Or (mark an or between blocks)")),
-            ("_AND", _("And (mark an and between blocks)")),
         )
         ),
     )
@@ -173,7 +172,7 @@ class AdvancedFilterQueryForm(CleanWhiteSpacesMixin, forms.Form):
         Take a list of query field dict and return data for form initialization
         """
         operator = 'iexact'
-        if query_data['field'] in ('_OR', '_AND'):
+        if query_data['field'] in ('_OR',):
             query_data['operator'] = operator
             return query_data
 
@@ -438,13 +437,11 @@ class AdvancedFilterForm(CleanWhiteSpacesMixin, forms.ModelForm):
         for form in self._non_deleted_forms:
             if not hasattr(form, 'cleaned_data'):
                 continue
-            if form.cleaned_data['field'] in ('_OR', '_AND'):
+            if form.cleaned_data['field'] in ('_OR',):
                 ORed.append(query)
                 query = Q()
                 if form.cleaned_data['field'] == '_OR':
                     _operator = operator.or_
-                elif form.cleaned_data['field'] == '_AND':
-                    _operator = operator.and_
             else:
                 query = query & form.make_query()
         if ORed:
