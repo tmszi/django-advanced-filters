@@ -9,6 +9,7 @@ var OperatorHandlers = function($) {
 		var form_id = self.val_input.parents('tr').attr('id');
 		var form_num = parseInt(form_id.replace('form-', ''), 10);
 
+		if ($("#id_form-" + form_num + "-value_from").length > 0) { return };
 		var $from = $('<input type="text">');
 		$from.attr("name", "form-" + form_num + "-value_from");
 		$from.attr("id", "id_form-" + form_num + "-value_from");
@@ -34,8 +35,8 @@ var OperatorHandlers = function($) {
 		}
 		self.val_input.css({display: 'none'});
 		$(".hasDatepicker").datetimepicker("destroy");
-		$from.addClass('vDateField');
-		$to.addClass('vDateField');
+		$from.addClass('vDateTimeField');
+		$to.addClass('vDateTimeField');
 		/* 
 			init jQuery-ui datetime picker
 			https://github.com/trentrichardson/jQuery-Timepicker-Addon
@@ -43,40 +44,6 @@ var OperatorHandlers = function($) {
 		$(".query-dt-from, .query-dt-to").datetimepicker({
 			dateFormat: 'yy-mm-dd'
 		});
-	};
-
-	self.remove_datepickers = function() {
-		self.val_input.css({display: 'block'});
-		if (self.val_input.parent().find('input.vDateField').length > 0) {
-			var datefields = self.val_input.parent().find('input.vDateField');
-			datefields.each(function() {
-				$(this).datepicker("destroy");
-			});
-			datefields.remove();
-		}
-	};
-
-	self.modify_widget = function(elm) {
-		// pick a widget for the value field according to operator
-		self.value = $(elm).val();
-		self.val_input = $(elm).parents('tr').find('.query-value');
-		if (self.value == "range") {
-			self.add_datepickers();
-		} else {
-			self.remove_datepickers();
-		}
-	};
-
-	self.load_field_operators = function(op) {
-		// pick a widget for the value field according field_operators to operator
-		var operators = JSON.parse(FILTER_FIELDS_OPERATORS);
-		var field_operators = operators[$(self.selected_field_elm).val()];
-		if (field_operators.length) {
-			op.empty();
-			$.each(field_operators, function (key, operator) {
-				op.append($('<option></option>').attr('value', operator[0]).text(operator[1]));
-			}
-		)}
 	};
 
 	self.initialize_select2 = function(elm) {
@@ -93,14 +60,56 @@ var OperatorHandlers = function($) {
 		});
 	};
 
+	self.remove_datepickers = function() {
+		self.val_input.css({display: 'block'});
+		if (self.val_input.parent().find('input.vDateTimeField').length > 0) {
+			var datefields = self.val_input.parent().find('input.vDateTimeField');
+			datefields.each(function() {
+				$(this).datetimepicker("destroy");
+			});
+			datefields.remove();
+		}
+	};
+
+	self.load_field_operators = function(op) {
+		// pick a widget for the value field according field_operators to operator
+		var operators = JSON.parse(FILTER_FIELDS_OPERATORS);
+		var field_operators = operators[$(self.selected_field_elm).val()];
+		if (field_operators.length) {
+			op.empty();
+			$.each(field_operators, function (key, operator) {
+				op.append($('<option></option>').attr('value', operator[0]).text(operator[1]));
+			}
+		)}
+	};
+
+	self.modify_widget = function(elm) {
+		// pick a widget for the value field according to operator
+		self.value = $(elm).val();
+		self.val_input = $(elm).parents('tr').find('.query-value');
+		var field =  $(elm).parents('tr').find('.query-field');
+		if (self.value == "range") {
+			self.add_datepickers();
+		} else {
+			self.remove_datepickers();
+		}
+	};
+
 	self.field_selected = function(elm) {
 		self.selected_field_elm = elm;
 		var row = $(elm).parents('tr');
 		var op = row.find('.query-operator');
 		var value = row.find('.query-value');
-		if ($(elm).val() == "_OR" || $(elm).val() == "_AND" ) {
+		if ($(elm).val() == "_OR") {
 			op.val("iexact").prop("disabled", true);
 			value.val("null").prop("disabled", true);
+			value.each(function() {
+				var id = $(this).attr('id');
+				$('#' + id + '_from, #' + id + '_to').each(function() {
+					$(this).remove()
+				});
+			});
+			value.select2("destroy");
 			op.after('<input type="hidden" value="' + op.val() +
 				'" name="' + op.attr("name") + '">');
 			value.after('<input type="hidden" value="' + value.val() +
@@ -113,9 +122,10 @@ var OperatorHandlers = function($) {
 			if (!value.val() == "null") {
 				value.val("");
 			}
-			op.val("iexact").change();
+			if (op.val() != 'range' && !$(elm).data('select2')) {
+				self.initialize_select2(elm);
+			}
 			self.load_field_operators(op);
-			self.initialize_select2(elm);
 		}
 	};
 
@@ -132,20 +142,20 @@ var OperatorHandlers = function($) {
 				var before_change = $(this).data('pre_change');
 				if ($(this).val() != before_change) self.modify_widget(this);
 				$(this).data('pre_change', $(this).val());
+				self.modify_widget(this);
 			}).change();
-			self.modify_widget(this);
 		});
 		$('.form-row.dynamic-form select.query-field').each(function(row) {
 			$(this).off("change");
 			$(this).data('pre_change', $(this).val());
 			$(this).on("change", function() {
 				var before_change = $(this).data('pre_change');
-				if ($(this).val() != before_change) self.field_selected(this);
+				if ($(this).val() != before_change) {
+					self.field_selected(this);
+				}
 				$(this).data('pre_change', $(this).val());
 			}).change();
 		});
-		self.field_selected($('.form-row select.query-field').first());
-
 	};
 
 	self.destroy = function() {
@@ -157,6 +167,11 @@ var OperatorHandlers = function($) {
 		});
 		$('.form-row input.query-value').each(function() {
 			$(this).select2("destroy");
+			var id = $(this).attr('id');
+			var from_to_input = $(this).parent().find('#' + id + '_from, #' + id + '_to')
+			if (from_to_input.length > 0) {
+				$(this).css({display: 'none'});
+			}
 		});
 	};
 };
