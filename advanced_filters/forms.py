@@ -39,7 +39,7 @@ SELECT2_CSS = getattr(settings, 'SELECT2_CSS', 'select2/select2.min.css')
 
 def date_to_string(timestamp):
     if timestamp:
-        return dt.fromtimestamp(timestamp).strftime('%Y-%m-%d')
+        return dt.fromtimestamp(timestamp).strftime('%Y-%m-%d %H:%M')
     else:
         return ""
 
