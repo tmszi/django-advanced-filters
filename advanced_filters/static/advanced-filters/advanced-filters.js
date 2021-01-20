@@ -93,6 +93,16 @@ var OperatorHandlers = function($) {
 		} else {
 			self.remove_datepickers();
 		}
+		if ($.inArray(self.value, ['isnull', 'istrue', 'isfalse']) >= 0) {
+			self.val_input.select2('destroy');
+			self.val_input.val('null');
+			self.val_input.prop('disabled', true);
+		} else {
+			if (self.value != 'range' && !(self.val_input.data('select2')) && field.val() != '_OR') {
+				self.val_input.prop('disabled', false);
+				self.initialize_select2($(elm).parents('tr').find('.query-field'));
+			}
+		}
 	};
 
 	self.field_selected = function(elm) {
