@@ -167,10 +167,23 @@ class AdvancedFilterQueryForm(CleanWhiteSpacesMixin, forms.Form):
         return SafeString(json.dumps(_fields))
 
     @staticmethod
-    def _parse_query_dict(query_data, model):
+    def _parse_query_dict(query_data, model, other_models_fields):
         """
         Take a list of query field dict and return data for form initialization
         """
+        def get_model_field():
+            field = query_data['field'].split('.')[-1]
+            _model = None
+            for f in other_models_fields:
+                if f['field'] == query_data['field']:
+                    _model = f['model']
+                    break
+
+            if _model:
+                return get_fields_from_path(_model, field)
+            else:
+                return get_fields_from_path(model, field)
+
         operator = 'iexact'
         if query_data['field'] in ('_OR',):
             query_data['operator'] = operator
@@ -188,7 +201,7 @@ class AdvancedFilterQueryForm(CleanWhiteSpacesMixin, forms.Form):
 
         query_data['field'] = field
 
-        mfield = get_fields_from_path(model, query_data['field'])
+        mfield = get_model_field()
         if not mfield:
             raise Exception('Field path "%s" could not be followed to a field'
                             ' in model %s', query_data['field'], model)
@@ -250,6 +263,23 @@ class AdvancedFilterQueryForm(CleanWhiteSpacesMixin, forms.Form):
         """ Returns a Q object from the submitted form """
         query = Q()  # initial is an empty query
         query_dict = self._build_query_dict(self.cleaned_data)
+
+        other_models_fields = kwargs.get('other_models_fields')
+        if other_models_fields:
+            for f in other_models_fields:
+                if f['field'] in list(query_dict.keys())[0]:
+                    f_with_operator = list(query_dict.keys())[0].split('.')[-1]
+                    q_value = list(query_dict.values())[0]
+                    qd = {
+                        f_with_operator: q_value,
+                    }
+                    result = f['model'].objects.filter(**qd).values_list(
+                        f['model_field_value'])
+                    if result:
+                        query_dict = {'id__in': result}
+                    query_dict = {}
+                    break
+
         if 'negate' in self.cleaned_data and self.cleaned_data['negate']:
             query = query & ~Q(**query_dict)
         else:
@@ -326,7 +356,7 @@ class AdvancedFilterForm(CleanWhiteSpacesMixin, forms.ModelForm):
             'magnific-popup/magnific-popup.css'
         ]}
 
-    def get_fields_from_model(self, model, fields):
+    def get_fields_from_model(self, model, fields, other_models_fields):
         """
         Iterate over given <field> names (in "orm query" notation) and find
         the actual field given the initial <model>.
@@ -337,6 +367,23 @@ class AdvancedFilterForm(CleanWhiteSpacesMixin, forms.ModelForm):
         """
         model_fields = {}
         group_index = 0
+
+        def get_field_model():
+            _model = None
+            for f in other_models_fields:
+                if f['field'] == subfield:
+                    _model = f['model']
+                    break
+            # _model = other_models_fields.get(subfield)
+            if _model:
+                return get_fields_from_path(
+                    _model, subfield.split('.')[1],
+                )[-1]
+            else:
+                return get_fields_from_path(
+                    model, subfield,
+                )[-1]
+
         for field in fields:
             if isinstance(field, tuple) and len(field) == 2:
                 _field, verbose_name = field[0], field[1]
@@ -352,7 +399,7 @@ class AdvancedFilterForm(CleanWhiteSpacesMixin, forms.ModelForm):
                             model_fields[_field] = verbose_name
                         else:
                             try:
-                                model_field = get_fields_from_path(model, subfield)[-1]
+                                model_field = get_field_model()
                                 verbose_name = model_field.verbose_name
                                 model_fields[subfield] = verbose_name
                             except (FieldDoesNotExist, IndexError, TypeError) as e:
@@ -362,7 +409,7 @@ class AdvancedFilterForm(CleanWhiteSpacesMixin, forms.ModelForm):
                                 continue
             else:
                 try:
-                    model_field = get_fields_from_path(model, field)[-1]
+                    model_field = get_field_model()
                     verbose_name = model_field.verbose_name
                     model_fields[field] = verbose_name
                 except (FieldDoesNotExist, IndexError, TypeError) as e:
@@ -371,6 +418,18 @@ class AdvancedFilterForm(CleanWhiteSpacesMixin, forms.ModelForm):
                     )
                     continue
         return model_fields
+
+    def get_other_models_fields(self):
+        """Get other models fields
+
+        :return str: other models json string
+        """
+        if self.other_models_fields:
+            other_models_fields = {}
+            for f in self.other_models_fields:
+                other_models_fields[f['field']] = \
+                    f"{f['model']._meta.app_label}.{f['model']._meta.model_name}"
+            return SafeString(json.dumps(other_models_fields))
 
     def __init__(self, *args, **kwargs):
         model_admin = kwargs.pop('model_admin', None)
@@ -399,6 +458,10 @@ class AdvancedFilterForm(CleanWhiteSpacesMixin, forms.ModelForm):
                 fields=getattr(model_admin,
                                'advanced_filter_fields_operators', {})
             )
+
+        self.other_models_fields = getattr(
+            model_admin, 'advanced_filter_other_models_fields', {})
+
         super(AdvancedFilterForm, self).__init__(*args, **kwargs)
 
         # populate existing or empty forms formset
@@ -443,7 +506,9 @@ class AdvancedFilterForm(CleanWhiteSpacesMixin, forms.ModelForm):
                 if form.cleaned_data['field'] == '_OR':
                     _operator = operator.or_
             else:
-                query = query & form.make_query()
+                query = query & form.make_query(
+                    other_models_fields=self.other_models_fields,
+                )
         if ORed:
             if query:  # add last query for OR if any
                 ORed.append(query)
@@ -452,14 +517,16 @@ class AdvancedFilterForm(CleanWhiteSpacesMixin, forms.ModelForm):
 
     def initialize_form(self, instance, model, data=None, extra=None):
         """ Takes a "finalized" query and generate it's form data """
-        model_fields = self.get_fields_from_model(model, self._filter_fields)
+        model_fields = self.get_fields_from_model(
+            model, self._filter_fields, self.other_models_fields,
+        )
 
         forms = []
         if instance:
             for field_data in instance.list_fields():
                 forms.append(
                     AdvancedFilterQueryForm._parse_query_dict(
-                        field_data, model))
+                        field_data, model, self.other_models_fields))
 
         formset = AFQFormSetNoExtra if not extra else AFQFormSet
         self.fields_formset = formset(
