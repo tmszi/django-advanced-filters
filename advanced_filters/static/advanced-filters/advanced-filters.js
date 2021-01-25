@@ -49,8 +49,15 @@ var OperatorHandlers = function($) {
 	self.initialize_select2 = function(elm) {
 		// initialize select2 widget and populate field choices
 		var field = $(elm).val();
-		var choices_url = ADVANCED_FILTER_CHOICES_LOOKUP_URL + (FORM_MODEL ||
-						  MODEL_LABEL) + '/' + field;
+		var other_models_fields = JSON.parse(OTHER_MODELS_FIELDS);
+		var other_model = other_models_fields[field];
+		if (typeof other_model !== 'undefined') {
+			var choices_url = ADVANCED_FILTER_CHOICES_LOOKUP_URL +
+				other_model + '/' + field.split('.')[1];
+		} else {
+			var choices_url = ADVANCED_FILTER_CHOICES_LOOKUP_URL +
+				(FORM_MODEL || MODEL_LABEL) + '/' + field;
+		}
 		var input = $(elm).parents('tr').find('input.query-value');
 		input.select2("destroy");
 		$.get(choices_url, function(data) {
@@ -71,16 +78,19 @@ var OperatorHandlers = function($) {
 		}
 	};
 
-	self.load_field_operators = function(op) {
+	self.load_field_operators = function(op, field) {
 		// pick a widget for the value field according field_operators to operator
 		var operators = JSON.parse(FILTER_FIELDS_OPERATORS);
-		var field_operators = operators[$(self.selected_field_elm).val()];
-		if (field_operators.length) {
+		var field_operators = operators[field.val()];
+		if (typeof field_operators !== 'undefined') {
 			op.empty();
-			$.each(field_operators, function (key, operator) {
+			var value;
+			$.each(field_operators, function (index, operator) {
+				if (index == 0) value = operator[0];
 				op.append($('<option></option>').attr('value', operator[0]).text(operator[1]));
-			}
-		)}
+			})
+			op.val(value).change();
+		}
 	};
 
 	self.modify_widget = function(elm) {
@@ -135,7 +145,7 @@ var OperatorHandlers = function($) {
 			if (op.val() != 'range' && !$(elm).data('select2')) {
 				self.initialize_select2(elm);
 			}
-			self.load_field_operators(op);
+			self.load_field_operators(op, $(elm));
 		}
 	};
 

@@ -74,6 +74,7 @@
 					var FORM_MODEL = undefined;
 					var MODEL_LABEL = '{{ app_label }}.{{ opts.model_name }}';
 					var FILTER_FIELDS_OPERATORS = '{{ advanced_filters.filter_fields_operators }}';
+					var OTHER_MODELS_FIELDS = '{{ advanced_filters.get_other_models_fields }}';
 					(function($) {
 						$.magnificPopup.instance._onFocusIn = function(e) {
 							// Do nothing if target element is select2 input
