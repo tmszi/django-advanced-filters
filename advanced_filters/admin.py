@@ -3,6 +3,7 @@ import logging
 from django.conf import settings
 from django.contrib import admin, messages
 from django.contrib.admin.utils import unquote
+from django.db.models import Q
 from django.http import HttpResponseRedirect
 from django.shortcuts import resolve_url
 from django.utils.translation import ugettext_lazy as _
@@ -39,7 +40,28 @@ class AdvancedListFilters(admin.SimpleListFilter):
                 return queryset
             query = advfilter.query
             logger.debug(query.__dict__)
-            queryset = queryset.filter(query).distinct()
+
+            """Pop out another models fields (model which has FK to base model),
+            from advanced filter query for filter base model
+            """
+            children = []
+            for k, v in query.__dict__.items():
+                if k == 'children':
+                    for f in v:
+                        if len(f[0].split('.')) > 1:
+                            continue
+                        else:
+                            children.append(f)
+                elif k == 'connector':
+                    query.connector = v
+                elif k == 'negated':
+                    query.negated = v
+            if children:
+                query.children = children
+                queryset = queryset.filter(query).distinct()
+            else:
+                queryset = queryset.none()
+
             # don't save filter (filter only, Filter button)
             if advfilter.delete:
                 filters.delete()
