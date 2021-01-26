@@ -374,7 +374,6 @@ class AdvancedFilterForm(CleanWhiteSpacesMixin, forms.ModelForm):
                 if f['field'] == subfield:
                     _model = f['model']
                     break
-            # _model = other_models_fields.get(subfield)
             if _model:
                 return get_fields_from_path(
                     _model, subfield.split('.')[1],
