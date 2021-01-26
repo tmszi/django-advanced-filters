@@ -181,6 +181,11 @@ var OperatorHandlers = function($) {
 	self.destroy = function() {
 		$('.form-row select.query-operator').each(function() {
 			$(this).off("change");
+			var row = $(this).parents('tr');
+			var field = row.find('.query-field');
+			var before = $(this).val();
+			self.load_field_operators($(this), field);
+			$(this).val(before);
 		});
 		$('.form-row select.query-field').each(function() {
 			$(this).off("change");
