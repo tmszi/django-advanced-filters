@@ -264,25 +264,30 @@ class AdvancedFilterQueryForm(CleanWhiteSpacesMixin, forms.Form):
         query = Q()  # initial is an empty query
         query_dict = self._build_query_dict(self.cleaned_data)
 
-        other_models_fields = kwargs.get('other_models_fields')
-        if other_models_fields:
-            for f in other_models_fields:
-                if f['field'] in list(query_dict.keys())[0]:
-                    f_with_operator = list(query_dict.keys())[0].split('.')[-1]
-                    q_value = list(query_dict.values())[0]
-                    qd = {
-                        f_with_operator: q_value,
-                    }
-                    result = f['model'].objects.filter(**qd).values_list(
-                        f['model_field_value'], flat=True)
-                    if result:
+        negate = None
+        if not kwargs.get('fake_query'):
+            other_models_fields = kwargs.get('other_models_fields')
+            if other_models_fields:
+                for f in other_models_fields:
+                    if f['field'] in list(query_dict.keys())[0]:
+                        f_with_operator = list(query_dict.keys())[0].split('.')[-1]
+                        q_value = list(query_dict.values())[0]
+                        qd = {
+                            f_with_operator: q_value,
+                        }
+                        if 'negate' in self.cleaned_data and self.cleaned_data['negate']:
+                            negate = True
+                            result = f['model'].objects.filter(~Q(**qd)).values_list(
+                                f['model_field_value'], flat=True)
+                        else:
+                            result = f['model'].objects.filter(**qd).values_list(
+                                f['model_field_value'], flat=True)
                         query_dict = {'id__in': list(result)}
-                    break
-        if 'negate' in self.cleaned_data and self.cleaned_data['negate']:
-            query = query & ~Q(**query_dict)
-        else:
-            query = query & Q(**query_dict)
-        return query
+                        break
+        if not negate:
+            if 'negate' in self.cleaned_data and self.cleaned_data['negate']:
+                return query & ~Q(**query_dict)
+        return query & Q(**query_dict)
 
     def __init__(self, model_fields={}, *args, **kwargs):
         super(AdvancedFilterQueryForm, self).__init__(*args, **kwargs)
@@ -476,7 +481,7 @@ class AdvancedFilterForm(CleanWhiteSpacesMixin, forms.ModelForm):
             forms.append(form)
         return forms
 
-    def generate_query(self):
+    def generate_query(self, fake_query=False):
         """ Reduces multiple queries into a single usable query """
         query = Q()
         ORed = []
@@ -491,6 +496,7 @@ class AdvancedFilterForm(CleanWhiteSpacesMixin, forms.ModelForm):
             else:
                 query = query & form.make_query(
                     other_models_fields=self.other_models_fields,
+                    fake_query=fake_query,
                 )
         if ORed:
             if query:  # add last query for OR if any
@@ -506,7 +512,8 @@ class AdvancedFilterForm(CleanWhiteSpacesMixin, forms.ModelForm):
 
         forms = []
         if instance:
-            for field_data in instance.list_fields():
+            fields = instance.list_fake_fields() if instance.list_fake_fields() else instance.list_fields()
+            for field_data in fields:
                 forms.append(
                     AdvancedFilterQueryForm._parse_query_dict(
                         field_data, model, self.other_models_fields))
@@ -520,5 +527,6 @@ class AdvancedFilterForm(CleanWhiteSpacesMixin, forms.ModelForm):
 
     def save(self, commit=True):
         self.instance.query = self.generate_query()
+        self.instance.fake_query = self.generate_query(fake_query=True)
         self.instance.model = self.cleaned_data.get('model')
         return super(AdvancedFilterForm, self).save(commit)

@@ -33,6 +33,7 @@ class AdvancedFilter(models.Model):
     objects = UserLookupManager()
 
     b64_query = models.CharField(max_length=2048)
+    b64_fake_query = models.CharField(max_length=2048)
     model = models.CharField(max_length=64, blank=True, null=True)
     delete = models.BooleanField(null=False, default=False)
 
@@ -61,3 +62,30 @@ class AdvancedFilter(models.Model):
         s = QSerializer(base64=True)
         d = s.loads(self.b64_query, raw=True)
         return s.get_field_values_list(d)
+
+    @property
+    def fake_query(self):
+        """
+        De-serialize, decode and return an ORM query stored in b64_query.
+        """
+        if not self.b64_query:
+            return None
+        s = QSerializer(base64=True)
+        return s.loads(self.b64_fake_query)
+
+    @fake_query.setter
+    def fake_query(self, value):
+        """
+        Serialize an ORM query, Base-64 encode it and set it to
+        the b64_query field
+        """
+        if not isinstance(value, Q):
+            raise Exception('Must only be passed a Django (Q)uery object')
+        s = QSerializer(base64=True)
+        self.b64_fake_query = s.dumps(value)
+
+    def list_fake_fields(self):
+        s = QSerializer(base64=True)
+        if self.b64_fake_query:
+            d = s.loads(self.b64_fake_query, raw=True)
+            return s.get_field_values_list(d)

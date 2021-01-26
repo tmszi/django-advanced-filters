@@ -89,6 +89,7 @@ class AdminAdvancedFiltersMixin(object):
             afilter = form.save(commit=False)
             afilter.created_by = request.user
             afilter.query = form.generate_query()
+            afilter.fake_query = form.generate_query(fake_query=True)
             if'_filter_goto' in (request.GET or request.POST):
                 afilter.delete = True
             afilter.save()
