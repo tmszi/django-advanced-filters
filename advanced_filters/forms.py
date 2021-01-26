@@ -277,7 +277,6 @@ class AdvancedFilterQueryForm(CleanWhiteSpacesMixin, forms.Form):
                         f['model_field_value'])
                     if result:
                         query_dict = {'id__in': result}
-                    query_dict = {}
                     break
 
         if 'negate' in self.cleaned_data and self.cleaned_data['negate']:
