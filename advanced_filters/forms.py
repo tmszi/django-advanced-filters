@@ -208,7 +208,7 @@ class AdvancedFilterQueryForm(CleanWhiteSpacesMixin, forms.Form):
         else:
             mfield = mfield[-1]  # get the field object
 
-        if query_data['value'] is None:
+        if query_data['value'] is None or operator == 'isnull':
             query_data['operator'] = "isnull"
         elif query_data['value'] is True:
             query_data['operator'] = "istrue"
