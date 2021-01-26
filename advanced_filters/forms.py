@@ -384,7 +384,6 @@ class AdvancedFilterForm(CleanWhiteSpacesMixin, forms.ModelForm):
 
         for field in fields:
             for index, subfield in enumerate(field):
-                print(index, subfield)
                 if index == 0:
                     model_fields[f"grp{group_index}"] = str(subfield)
                     group_index += 1
