@@ -274,11 +274,10 @@ class AdvancedFilterQueryForm(CleanWhiteSpacesMixin, forms.Form):
                         f_with_operator: q_value,
                     }
                     result = f['model'].objects.filter(**qd).values_list(
-                        f['model_field_value'])
+                        f['model_field_value'], flat=True)
                     if result:
-                        query_dict = {'id__in': result}
+                        query_dict = {'id__in': list(result)}
                     break
-
         if 'negate' in self.cleaned_data and self.cleaned_data['negate']:
             query = query & ~Q(**query_dict)
         else:
