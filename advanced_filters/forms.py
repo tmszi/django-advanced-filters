@@ -385,38 +385,25 @@ class AdvancedFilterForm(CleanWhiteSpacesMixin, forms.ModelForm):
                 )[-1]
 
         for field in fields:
-            if isinstance(field, tuple) and len(field) == 2:
-                _field, verbose_name = field[0], field[1]
-                model_fields[_field] = verbose_name
-            elif isinstance(field, tuple) and len(field) > 1:
-                for index, subfield in enumerate(field):
-                    if index == 0:
-                        model_fields[f"grp{group_index}"] = str(subfield)
-                        group_index += 1
+            for index, subfield in enumerate(field):
+                print(index, subfield)
+                if index == 0:
+                    model_fields[f"grp{group_index}"] = str(subfield)
+                    group_index += 1
+                else:
+                    if isinstance(subfield, tuple) and len(subfield) == 2:
+                        _field, verbose_name = subfield[0], subfield[1]
+                        model_fields[_field] = verbose_name
                     else:
-                        if isinstance(subfield, tuple) and len(subfield) == 2:
-                            _field, verbose_name = subfield[0], subfield[1]
-                            model_fields[_field] = verbose_name
-                        else:
-                            try:
-                                model_field = get_field_model()
-                                verbose_name = model_field.verbose_name
-                                model_fields[subfield] = verbose_name
-                            except (FieldDoesNotExist, IndexError, TypeError) as e:
-                                logger.warning(
-                                    "AdvancedFilterForm: skip invalid field - %s", e
-                                )
-                                continue
-            else:
-                try:
-                    model_field = get_field_model()
-                    verbose_name = model_field.verbose_name
-                    model_fields[field] = verbose_name
-                except (FieldDoesNotExist, IndexError, TypeError) as e:
-                    logger.warning(
-                        "AdvancedFilterForm: skip invalid field - %s", e
-                    )
-                    continue
+                        try:
+                            model_field = get_field_model()
+                            verbose_name = model_field.verbose_name
+                            model_fields[subfield] = verbose_name
+                        except (FieldDoesNotExist, IndexError, TypeError) as e:
+                            logger.warning(
+                                "AdvancedFilterForm: skip invalid field - %s", e
+                            )
+                            continue
         return model_fields
 
     def get_other_models_fields(self):
