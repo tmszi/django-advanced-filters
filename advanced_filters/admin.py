@@ -40,28 +40,7 @@ class AdvancedListFilters(admin.SimpleListFilter):
                 return queryset
             query = advfilter.query
             logger.debug(query.__dict__)
-
-            """Pop out another models fields (model which has FK to base model),
-            from advanced filter query for filter base model
-            """
-            children = []
-            for k, v in query.__dict__.items():
-                if k == 'children':
-                    for f in v:
-                        if len(f[0].split('.')) > 1:
-                            continue
-                        else:
-                            children.append(f)
-                elif k == 'connector':
-                    query.connector = v
-                elif k == 'negated':
-                    query.negated = v
-            if children:
-                query.children = children
-                queryset = queryset.filter(query).distinct()
-            else:
-                queryset = queryset.none()
-
+            queryset = queryset.filter(query).distinct()
             # don't save filter (filter only, Filter button)
             if advfilter.delete:
                 filters.delete()
