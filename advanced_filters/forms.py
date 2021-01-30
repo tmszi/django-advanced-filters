@@ -562,7 +562,7 @@ class AdvancedFilterForm(CleanWhiteSpacesMixin, forms.ModelForm):
             for field_data in fields:
                 forms.append(
                     AdvancedFilterQueryForm._parse_query_dict(
-                        field_data, model, self.other_models_fields))
+                        field_data, model, self._app_label))
 
         formset = AFQFormSetNoExtra if not extra else AFQFormSet
         self.fields_formset = formset(
