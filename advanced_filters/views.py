@@ -11,6 +11,7 @@ from django.views.generic import View
 from braces.views import (CsrfExemptMixin, StaffuserRequiredMixin,
                           JSONResponseMixin)
 
+
 logger = logging.getLogger('advanced_filters.views')
 
 
@@ -36,39 +37,58 @@ class GetFieldChoices(CsrfExemptMixin, StaffuserRequiredMixin,
             model_obj = apps.get_model(app_label, model_name)
             field = get_fields_from_path(model_obj, field_name)[-1]
             model_obj = field.model  # use new model if followed a ForeignKey
+            choices = field.choices
         except AttributeError as e:
             logger.debug("Invalid kwargs passed to view: %s", e)
             return self.render_json_response(
                 {'error': "No installed app/model: %s" % model}, status=400)
         except (LookupError, FieldDoesNotExist) as e:
-            logger.debug("Invalid kwargs passed to view: %s", e)
-            return self.render_json_response(
-                {'error': force_str(e)}, status=400)
+            app = apps.get_app_config(request.session['app_label'])
+            for f in getattr(app.module.filters, 'AF_FILTERS'):
+                if (f.field == field_name and
+                    f.model._meta.model_name == model_name):
+                    break
+            field_filter = f()
+            try:
+                choices = list(field_filter.queryset(
+                    administrative_unit=request.user.administrated_units.first(),
+                ).distinct().values_list(f.field, f.field))
+            except Exception as e:
+                logger.debug("Invalid kwargs passed to view: %s", e)
+                return self.render_json_response(
+                    {'error': force_str(e)}, status=400)
 
-        choices = field.choices
         # if no choices, populate with distinct values from instances
         if not choices:
             choices = []
             disabled = getattr(settings, 'ADVANCED_FILTERS_DISABLE_FOR_FIELDS',
                                tuple())
             max_choices = getattr(settings, 'ADVANCED_FILTERS_MAX_CHOICES', 254)
-            if field.name in disabled:
+            if field and field.name in disabled:
                 logger.debug('Skipped lookup of choices for disabled fields')
-            elif isinstance(field, (models.BooleanField, models.DateField,
-                                    models.TimeField)):
+            elif field and isinstance(field, (models.BooleanField, models.DateField,
+                                              models.TimeField)):
                 logger.debug('No choices calculated for field %s of type %s',
                              field, type(field))
             else:
-                # the order_by() avoids ambiguity with values() and distinct()
-                choices = model_obj.objects.order_by(field.name).values_list(
-                    field.name, flat=True).distinct()
-                # additional query is ok to avoid fetching too many values
-                if choices.count() <= max_choices:
-                    choices = zip(choices, choices)
-                    logger.debug('Choices found for field %s: %s',
-                                 field.name, choices)
+                if field:
+                    # the order_by() avoids ambiguity with values() and distinct()
+                    choices = model_obj.objects.order_by(field.name).values_list(
+                        field.name, flat=True).distinct()
+                    # additional query is ok to avoid fetching too many values
+                    if choices.count() <= max_choices:
+                        choices = zip(choices, choices)
+                        logger.debug('Choices found for field %s: %s',
+                                     field.name, choices)
+                    else:
+                        choices = []
                 else:
-                    choices = []
+                    if len(choices) <= max_choices:
+                        choices = zip(choices, choices)
+                        logger.debug('Choices found for field %s: %s',
+                                     field_name, choices)
+                    else:
+                        choices = []
 
         results = [{'id': c[0], 'text': force_str(c[1])} for c in sorted(
                    choices, key=lambda x: (x[0] is not None, x[0]))]
