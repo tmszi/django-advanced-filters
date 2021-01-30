@@ -454,12 +454,14 @@ class AdvancedFilterForm(CleanWhiteSpacesMixin, forms.ModelForm):
 
         :return str: other models json string
         """
-        if self.other_models_fields:
-            other_models_fields = {}
-            for f in self.other_models_fields:
-                other_models_fields[f['field']] = \
-                    f"{f['model']._meta.app_label}.{f['model']._meta.model_name}"
-            return SafeString(json.dumps(other_models_fields))
+        app = apps.get_app_config('aklub')
+        other_models_fields = {}
+        for i in json.loads(self.filter_fields_operators).keys():
+            for f in getattr(app.module.filters, 'AF_FILTERS'):
+                if i == str(f()):
+                    other_models_fields[i] = \
+                        f"{f.model._meta.app_label}.{f.model._meta.model_name}"
+        return SafeString(json.dumps(other_models_fields))
 
     def __init__(self, *args, **kwargs):
         model_admin = kwargs.pop('model_admin', None)
