@@ -65,10 +65,11 @@ class AdminAdvancedFiltersMixin(object):
 
     def save_advanced_filter(self, request, form):
         if form.is_valid():
-            afilter = form.save(commit=False)
+            afilter = form.save(commit=False, user=request.user)
             afilter.created_by = request.user
-            afilter.query = form.generate_query()
-            afilter.fake_query = form.generate_query(fake_query=True)
+            afilter.query = form.generate_query(user=request.user)
+            afilter.fake_query = form.generate_query(
+                user=request.user, fake_query=True)
             if'_filter_goto' in (request.GET or request.POST):
                 afilter.delete = True
             afilter.save()
