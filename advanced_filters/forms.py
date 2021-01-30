@@ -91,7 +91,7 @@ class AdvancedFilterQueryForm(CleanWhiteSpacesMixin, forms.Form):
         for fquery, fname in fields.items():
             if 'grp' in fquery:
                 if group:
-                    group[1].sort(key=lambda tup: tup[1])
+                    # group[1].sort(key=lambda tup: tup[1])
                     result.append(group)
                     group = (capfirst(fname), [])
                 else:
@@ -100,7 +100,7 @@ class AdvancedFilterQueryForm(CleanWhiteSpacesMixin, forms.Form):
                 if group:
                     group[1].append((fquery, capfirst(fname)))
         if group:
-            group[1].sort(key=lambda tup: tup[1])
+            # group[1].sort(key=lambda tup: tup[1])
             result.append(group)
         return tuple(result) + self.FIELD_CHOICES
 
