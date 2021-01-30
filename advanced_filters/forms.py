@@ -167,22 +167,33 @@ class AdvancedFilterQueryForm(CleanWhiteSpacesMixin, forms.Form):
         return SafeString(json.dumps(_fields))
 
     @staticmethod
-    def _parse_query_dict(query_data, model, other_models_fields):
+    def _parse_query_dict(query_data, model, app_label):
         """
         Take a list of query field dict and return data for form initialization
         """
         def get_model_field():
             field = query_data['field'].split('.')[-1]
             _model = None
-            for f in other_models_fields:
-                if f['field'] == query_data['field']:
-                    _model = f['model']
-                    break
+
+            app = apps.get_app_config(app_label)
+            for f in getattr(app.module.filters, 'AF_FILTERS'):
+                if f.field == field:
+                    fields = [_.name for _ in f.model._meta.fields]
+                    if f.field in fields:
+                        _model = f.model
+                    else:
+                        return None
 
             if _model:
-                return get_fields_from_path(_model, field)
+                try:
+                    return get_fields_from_path(_model, field)
+                except FieldDoesNotExist:
+                    pass
             else:
-                return get_fields_from_path(model, field)
+		try:
+                    return get_fields_from_path(model, field)
+                except FieldDoesNotExist:
+                    pass
 
         operator = 'iexact'
         if query_data['field'] in ('_OR',):
@@ -202,10 +213,11 @@ class AdvancedFilterQueryForm(CleanWhiteSpacesMixin, forms.Form):
         query_data['field'] = field
 
         mfield = get_model_field()
-        if not mfield:
-            raise Exception('Field path "%s" could not be followed to a field'
-                            ' in model %s', query_data['field'], model)
-        else:
+        # if not mfield:
+        #     raise Exception('Field path "%s" could not be followed to a field'
+        #                     ' in model %s', query_data['field'], model)
+        # else:
+        if mfield:
             mfield = mfield[-1]  # get the field object
 
         if query_data['value'] is None or operator == 'isnull':
