@@ -526,7 +526,7 @@ class AdvancedFilterForm(CleanWhiteSpacesMixin, forms.ModelForm):
             forms.append(form)
         return forms
 
-    def generate_query(self, fake_query=False):
+    def generate_query(self, user, fake_query=False):
         """ Reduces multiple queries into a single usable query """
         query = Q()
         ORed = []
@@ -540,8 +540,9 @@ class AdvancedFilterForm(CleanWhiteSpacesMixin, forms.ModelForm):
                     _operator = operator.or_
             else:
                 query = query & form.make_query(
-                    other_models_fields=self.other_models_fields,
+                    user=user,
                     fake_query=fake_query,
+                    app_label=self._app_label,
                 )
         if ORed:
             if query:  # add last query for OR if any
@@ -570,8 +571,10 @@ class AdvancedFilterForm(CleanWhiteSpacesMixin, forms.ModelForm):
             model_fields=model_fields,
         )
 
-    def save(self, commit=True):
-        self.instance.query = self.generate_query()
-        self.instance.fake_query = self.generate_query(fake_query=True)
+    def save(self, user=None, commit=True):
+        if hasattr(self.instance, 'created_by'):
+            user = self.instance.created_by
+        self.instance.query = self.generate_query(user=user)
+        self.instance.fake_query = self.generate_query(user=user, fake_query=True)
         self.instance.model = self.cleaned_data.get('model')
         return super(AdvancedFilterForm, self).save(commit)
