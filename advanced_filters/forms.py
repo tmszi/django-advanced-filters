@@ -454,7 +454,7 @@ class AdvancedFilterForm(CleanWhiteSpacesMixin, forms.ModelForm):
 
         :return str: other models json string
         """
-        app = apps.get_app_config('aklub')
+        app = apps.get_app_config(self._app_label)
         other_models_fields = {}
         for i in json.loads(self.filter_fields_operators).keys():
             for f in getattr(app.module.filters, 'AF_FILTERS'):
