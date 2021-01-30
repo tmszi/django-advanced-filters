@@ -482,6 +482,7 @@ class AdvancedFilterForm(CleanWhiteSpacesMixin, forms.ModelForm):
             raise Exception('Adding new AdvancedFilter from admin is '
                             'not supported')
 
+        self._app_label = self._model._meta.app_label
         self._filter_fields = filter_fields or getattr(
             model_admin, 'advanced_filter_fields', ())
 
