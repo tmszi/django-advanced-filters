@@ -190,7 +190,7 @@ class AdvancedFilterQueryForm(CleanWhiteSpacesMixin, forms.Form):
                 except FieldDoesNotExist:
                     pass
             else:
-		try:
+                try:
                     return get_fields_from_path(model, field)
                 except FieldDoesNotExist:
                     pass
@@ -492,9 +492,6 @@ class AdvancedFilterForm(CleanWhiteSpacesMixin, forms.ModelForm):
                                'advanced_filter_fields_operators', {})
             )
 
-        self.other_models_fields = getattr(
-            model_admin, 'advanced_filter_other_models_fields', {})
-
         super(AdvancedFilterForm, self).__init__(*args, **kwargs)
 
         # populate existing or empty forms formset
@@ -564,7 +561,7 @@ class AdvancedFilterForm(CleanWhiteSpacesMixin, forms.ModelForm):
     def initialize_form(self, instance, model, data=None, extra=None):
         """ Takes a "finalized" query and generate it's form data """
         model_fields = self.get_fields_from_model(
-            model, self._filter_fields, self.other_models_fields,
+            model, self._filter_fields,
         )
 
         forms = []
