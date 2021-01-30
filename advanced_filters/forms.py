@@ -359,7 +359,7 @@ class AdvancedFilterForm(CleanWhiteSpacesMixin, forms.ModelForm):
             'magnific-popup/magnific-popup.css'
         ]}
 
-    def get_fields_from_model(self, model, fields, other_models_fields):
+    def get_fields_from_model(self, model, fields):
         """
         Iterate over given <field> names (in "orm query" notation) and find
         the actual field given the initial <model>.
@@ -371,12 +371,21 @@ class AdvancedFilterForm(CleanWhiteSpacesMixin, forms.ModelForm):
         model_fields = {}
         group_index = 0
 
-        def get_field_model():
+        def get_field_model(subfield, model):
             _model = None
-            for f in other_models_fields:
-                if f['field'] == subfield:
-                    _model = f['model']
-                    break
+            app = apps.get_app_config(self._app_label)
+            for f in getattr(app.module.filters, 'AF_FILTERS'):
+                if str(f()) == subfield:
+                    fields = [_.name for _ in f.model._meta.fields]
+                    if f().get_field in fields:
+                        _model = f.model
+                        subfield = str(f())
+                    else:
+                        class Field:
+                            pass
+                        _f = Field()
+                        _f.verbose_name = f.field_verbose_name
+                        return _f
             if _model:
                 return get_fields_from_path(
                     _model, subfield.split('.')[1],
@@ -397,7 +406,7 @@ class AdvancedFilterForm(CleanWhiteSpacesMixin, forms.ModelForm):
                         model_fields[_field] = verbose_name
                     else:
                         try:
-                            model_field = get_field_model()
+                            model_field = get_field_model(subfield, model)
                             verbose_name = model_field.verbose_name
                             model_fields[subfield] = verbose_name
                         except (FieldDoesNotExist, IndexError, TypeError) as e:
