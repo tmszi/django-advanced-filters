@@ -279,25 +279,44 @@ class AdvancedFilterQueryForm(CleanWhiteSpacesMixin, forms.Form):
         query_dict = self._build_query_dict(self.cleaned_data)
 
         negate = None
+        user = kwargs.get('user')
+        if user:
+            administrative_unit = user.administrated_units.first()
         if not kwargs.get('fake_query'):
-            other_models_fields = kwargs.get('other_models_fields')
-            if other_models_fields:
-                for f in other_models_fields:
-                    if f['field'] in list(query_dict.keys())[0]:
-                        f_with_operator = list(query_dict.keys())[0].split('.')[-1]
-                        q_value = list(query_dict.values())[0]
-                        qd = {
-                            f_with_operator: q_value,
-                        }
-                        if 'negate' in self.cleaned_data and self.cleaned_data['negate']:
-                            negate = True
-                            result = f['model'].objects.filter(~Q(**qd)).values_list(
-                                f['model_field_value'], flat=True)
-                        else:
-                            result = f['model'].objects.filter(**qd).values_list(
-                                f['model_field_value'], flat=True)
-                        query_dict = {'id__in': list(result)}
+            app = apps.get_app_config(kwargs['app_label'])
+            for f in getattr(app.module.filters, 'AF_FILTERS'):
+                if f.field in list(query_dict.keys())[0]:
+                    f_with_operator = list(query_dict.keys())[0].split('.')[-1]
+                    q_value = list(query_dict.values())[0]
+                    qd = {
+                        f_with_operator: q_value,
+                    }
+
+                    if hasattr(f, 'query'):
+                        query_dict.update(
+                            f().query(
+                                administrative_unit=administrative_unit,
+                            )
+                        )
                         break
+                    queryset = None
+                    if user:
+                        queryset = f().queryset(
+                            administrative_unit=administrative_unit,
+                        )
+
+                    model = queryset if queryset else \
+                        f.model.objects
+
+                    if 'negate' in self.cleaned_data and self.cleaned_data['negate']:
+                        negate = True
+                        result = model.filter(~Q(**qd)).distinct().values_list(
+                            f.values_list_field, flat=True).distinct()
+                    else:
+                        result = model.filter(**qd).values_list(
+                            f.values_list_field, flat=True).distinct()
+                    query_dict = {'id__in': list(result)}
+                    break
         if not negate:
             if 'negate' in self.cleaned_data and self.cleaned_data['negate']:
                 return query & ~Q(**query_dict)
