@@ -551,7 +551,8 @@ class AdvancedFilterForm(CleanWhiteSpacesMixin, forms.ModelForm):
             if id_in:
                 id_in = list(set(id_in))
                 id_in_q = Q(**{'id__in': id_in})
-                query = reduce(operator.or_, [id_in_q, query])
+                query = query & id_in_q
+                # query = reduce(operator.or_, [id_in_q, query])
         if ORed:
             if query:  # add last query for OR if any
                 ORed.append(query)
