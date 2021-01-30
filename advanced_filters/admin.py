@@ -99,6 +99,7 @@ class AdminAdvancedFiltersMixin(object):
             'current_afilter': request.GET.get('_afilter'),
             'app_label': self.opts.app_label,
         })
+        request.session['app_label'] = self.opts.app_label
         return self.save_advanced_filter(request, adv_filters_form)
 
     def changelist_view(self, request, extra_context=None):
