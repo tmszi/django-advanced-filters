@@ -252,7 +252,9 @@ class AdvancedFilterQueryForm(CleanWhiteSpacesMixin, forms.Form):
         from django.core.exceptions import ValidationError
         data = self.cleaned_data.get('value')
         operator = self.cleaned_data.get('operator')
-        if operator and operator not in ('isnull', 'istrue', 'isfalse') and not data:
+        field = self.cleaned_data.get('field')
+        if (field != '_OR' and operator and
+            operator not in ('isnull', 'istrue', 'isfalse') and not data):
             raise ValidationError(_('This field is required'))
 
         # Always return a value to use as the new cleaned data, even if
