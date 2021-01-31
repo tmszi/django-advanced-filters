@@ -50,8 +50,12 @@ class GetFieldChoices(CsrfExemptMixin, StaffuserRequiredMixin,
                     break
             field_filter = f()
             try:
+                if request.user.has_perm('can_edit_all_units'):
+                    administrative_unit = request.user.administrated_units.all()
+                else:
+                    administrative_unit = request.user.administrated_units.first()
                 choices = list(field_filter.queryset(
-                    administrative_unit=request.user.administrated_units.first(),
+                    administrative_unit=administrative_unit,
                 ).distinct().values_list(f.field, f.field))
             except Exception as e:
                 logger.debug("Invalid kwargs passed to view: %s", e)
