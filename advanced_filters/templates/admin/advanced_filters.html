@@ -24,7 +24,7 @@
 		{% with advanced_filters.fields_formset as formset %}
 			<div class="white-popup mfp-hide" id="advanced_filters">
 				<h1>{% trans "Create advanced filter" %}:</h1>
-				<form novalidate method="POST" id="advanced_filters_form">
+				<form novalidate method="POST" id="advanced_filters_form" onsubmit='enable()'>
 					{% csrf_token %}
 					{{ formset.management_form }}
 					<input type="hidden" value="advanced_filters" name="action">
@@ -76,6 +76,14 @@
 					var FILTER_FIELDS_OPERATORS = '{{ advanced_filters.filter_fields_operators }}';
 					var OTHER_MODELS_FIELDS = '{{ advanced_filters.get_other_models_fields }}';
 					var APP_LABEL = '{{ adminform.form.app_label }}';
+					function enable() {
+						$('.form-row select.query-operator').each(function() {
+							var row = $(this).parents('tr');
+							var op = row.find('.query-operator');
+							op.prop('disabled', false);
+						})
+						return true;
+					}
 					(function($) {
 						$.magnificPopup.instance._onFocusIn = function(e) {
 							// Do nothing if target element is select2 input

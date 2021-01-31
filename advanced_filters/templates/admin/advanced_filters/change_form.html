@@ -8,7 +8,7 @@
 {% endblock extrastyle %}
 
 {% block content %}
-	<form novalidate {% if has_file_field %}enctype="multipart/form-data" {% endif %}action="{{ form_url }}" method="post" id="{{ opts.model_name }}_form">{% csrf_token %}{% block form_top %}{% endblock %}
+	<form novalidate {% if has_file_field %}enctype="multipart/form-data" {% endif %}action="{{ form_url }}" method="post" id="{{ opts.model_name }}_form" onsubmit='enable()'>{% csrf_token %}{% block form_top %}{% endblock %}
 		{% with adminform.form.fields_formset as formset %}
 			<div id="advanced_filters">
 				<h1>{% trans "Change advanced filter" %}:</h1>
@@ -61,6 +61,14 @@
 					var FILTER_FIELDS_OPERATORS = '{{ adminform.form.filter_fields_operators }}';
 					var OTHER_MODELS_FIELDS = '{{ adminform.form.get_other_models_fields }}';
 					var APP_LABEL = '{{ adminform.form.app_label }}';
+					function enable() {
+						$('.form-row select.query-operator').each(function() {
+							var row = $(this).parents('tr');
+							var op = row.find('.query-operator');
+							op.prop('disabled', false);
+						})
+						return true;
+					}
 				</script>
 
 				{% include "admin/common_js_init.html" with formset=formset %}
