@@ -27,14 +27,14 @@ class GetFieldChoices(CsrfExemptMixin, StaffuserRequiredMixin,
     ADVANCED_FILTERS_DISABLE_FOR_FIELDS and limited to display only results
     under ADVANCED_FILTERS_MAX_CHOICES.
     """
-    def get(self, request, model=None, field_name=None):
-        if model is field_name is None:
+    def get(self, request, model=None, field_name=None, app_label=None):
+        if model is field_name is app_label is None:
             return self.render_json_response(
-                {'error': "GetFieldChoices view requires 2 arguments"},
+                {'error': "GetFieldChoices view requires 3 arguments"},
                 status=400)
-        app_label, model_name = model.split('.', 1)
+        model_app_label, model_name = model.split('.', 1)
         try:
-            model_obj = apps.get_model(app_label, model_name)
+            model_obj = apps.get_model(model_app_label, model_name)
             field = get_fields_from_path(model_obj, field_name)[-1]
             model_obj = field.model  # use new model if followed a ForeignKey
             choices = field.choices
@@ -43,7 +43,7 @@ class GetFieldChoices(CsrfExemptMixin, StaffuserRequiredMixin,
             return self.render_json_response(
                 {'error': "No installed app/model: %s" % model}, status=400)
         except (LookupError, FieldDoesNotExist) as e:
-            app = apps.get_app_config(request.session['app_label'])
+            app = apps.get_app_config(app_label)
             for f in getattr(app.module.filters, 'AF_FILTERS'):
                 if (f.field == field_name and
                     f.model._meta.model_name == model_name):

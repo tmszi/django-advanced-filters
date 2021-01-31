@@ -3,7 +3,7 @@ from django.conf.urls import url
 from advanced_filters.views import GetFieldChoices
 
 urlpatterns = [
-    url(r'^field_choices/(?P<model>.+)/(?P<field_name>.+)/?',
+    url(r'^field_choices/(?P<model>.+)/(?P<field_name>.+)/(?P<app_label>.+)/?',
         GetFieldChoices.as_view(),
         name='afilters_get_field_choices'),
 

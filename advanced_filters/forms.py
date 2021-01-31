@@ -409,7 +409,7 @@ class AdvancedFilterForm(CleanWhiteSpacesMixin, forms.ModelForm):
 
         def get_field_model(subfield, model):
             _model = None
-            app = apps.get_app_config(self._app_label)
+            app = apps.get_app_config(self.app_label)
             for f in getattr(app.module.filters, 'AF_FILTERS'):
                 if str(f()) == subfield:
                     fields = [_.name for _ in f.model._meta.fields]
@@ -457,7 +457,7 @@ class AdvancedFilterForm(CleanWhiteSpacesMixin, forms.ModelForm):
 
         :return str: other models json string
         """
-        app = apps.get_app_config(self._app_label)
+        app = apps.get_app_config(self.app_label)
         other_models_fields = {}
         for i in json.loads(self.filter_fields_operators).keys():
             for f in getattr(app.module.filters, 'AF_FILTERS'):
@@ -485,7 +485,7 @@ class AdvancedFilterForm(CleanWhiteSpacesMixin, forms.ModelForm):
             raise Exception('Adding new AdvancedFilter from admin is '
                             'not supported')
 
-        self._app_label = self._model._meta.app_label
+        self.app_label = self._model._meta.app_label
         self._filter_fields = filter_fields or getattr(
             model_admin, 'advanced_filter_fields', ())
 
@@ -542,7 +542,7 @@ class AdvancedFilterForm(CleanWhiteSpacesMixin, forms.ModelForm):
                 query = query & form.make_query(
                     user=user,
                     fake_query=fake_query,
-                    app_label=self._app_label,
+                    app_label=self.app_label,
                 )
         id_in = []
         if len(query.children) > 1:
@@ -574,7 +574,7 @@ class AdvancedFilterForm(CleanWhiteSpacesMixin, forms.ModelForm):
             for field_data in fields:
                 forms.append(
                     AdvancedFilterQueryForm._parse_query_dict(
-                        field_data, model, self._app_label))
+                        field_data, model, self.app_label))
 
         formset = AFQFormSetNoExtra if not extra else AFQFormSet
         self.fields_formset = formset(

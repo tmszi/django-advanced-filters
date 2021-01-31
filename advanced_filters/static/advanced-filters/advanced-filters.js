@@ -53,10 +53,10 @@ var OperatorHandlers = function($) {
 		var other_model = other_models_fields[field];
 		if (typeof other_model !== 'undefined') {
 			var choices_url = ADVANCED_FILTER_CHOICES_LOOKUP_URL +
-				other_model + '/' + field.split('.')[1];
+				other_model + '/' + field.split('.')[1] + '/' + APP_LABEL;
 		} else {
 			var choices_url = ADVANCED_FILTER_CHOICES_LOOKUP_URL +
-				(FORM_MODEL || MODEL_LABEL) + '/' + field;
+				(FORM_MODEL || MODEL_LABEL) + '/' + field + '/' + APP_LABEL;
 		}
 		var input = $(elm).parents('tr').find('input.query-value');
 		input.select2("destroy");

@@ -60,6 +60,7 @@
 					var MODEL_LABEL = '{{ app_label }}.{{ opts.model_name }}';
 					var FILTER_FIELDS_OPERATORS = '{{ adminform.form.filter_fields_operators }}';
 					var OTHER_MODELS_FIELDS = '{{ adminform.form.get_other_models_fields }}';
+					var APP_LABEL = '{{ adminform.form.app_label }}';
 				</script>
 
 				{% include "admin/common_js_init.html" with formset=formset %}
