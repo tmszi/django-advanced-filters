@@ -494,6 +494,11 @@ class AdvancedFilterForm(CleanWhiteSpacesMixin, forms.ModelForm):
                 fields=getattr(model_admin,
                                'advanced_filter_fields_operators', {})
             )
+        self.all_query_operators = SafeString(
+            json.dumps(
+                [(o[0], str(o[1])) for o in AdvancedFilterQueryForm.OPERATORS]
+            ),
+        )
 
         super(AdvancedFilterForm, self).__init__(*args, **kwargs)
 

@@ -126,6 +126,9 @@ var OperatorHandlers = function($) {
 		var op = row.find('.query-operator');
 		var value = row.find('.query-value');
 		if ($(elm).val() == "_OR") {
+			op.empty()
+			var operators = JSON.parse(ALL_QUERY_OPERATORS);
+			op.append($('<option></option>').attr('value', operators[0][0]).text(operators[0][1]));
 			op.val("iexact").prop("disabled", true);
 			value.val("null").prop("disabled", true);
 			value.each(function() {
