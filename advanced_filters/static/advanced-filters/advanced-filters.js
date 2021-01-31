@@ -80,6 +80,11 @@ var OperatorHandlers = function($) {
 
 	self.load_field_operators = function(op, field) {
 		// pick a widget for the value field according field_operators to operator
+		if (field.val() == '_OR') {
+			op.prop('disabled', true);
+			var value = field.parents('tr').find('.query-value');
+			value.prop('disabled', true);
+		}
 		var operators = JSON.parse(FILTER_FIELDS_OPERATORS);
 		var field_operators = operators[field.val()];
 		if (typeof field_operators !== 'undefined') {
