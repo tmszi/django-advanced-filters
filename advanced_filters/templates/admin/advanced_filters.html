@@ -75,7 +75,7 @@
 					var MODEL_LABEL = '{{ app_label }}.{{ opts.model_name }}';
 					var FILTER_FIELDS_OPERATORS = '{{ advanced_filters.filter_fields_operators }}';
 					var OTHER_MODELS_FIELDS = '{{ advanced_filters.get_other_models_fields }}';
-					var APP_LABEL = '{{ adminform.form.app_label }}';
+					var APP_LABEL = '{{ advanced_filters.app_label }}';
 					function enable() {
 						$('.form-row select.query-operator').each(function() {
 							var row = $(this).parents('tr');
