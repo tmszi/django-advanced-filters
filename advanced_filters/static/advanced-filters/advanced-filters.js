@@ -116,6 +116,8 @@ var OperatorHandlers = function($) {
 			if (self.value != 'range' && !(self.val_input.data('select2')) && field.val() != '_OR') {
 				self.val_input.prop('disabled', false);
 				self.initialize_select2($(elm).parents('tr').find('.query-field'));
+			} else if (self.value != 'range') {
+				self.val_input.select2('destroy');
 			}
 		}
 	};
