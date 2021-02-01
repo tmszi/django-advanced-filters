@@ -35,7 +35,13 @@
 									{% for field in form.visible_fields %}
 										<td{% if field.field.name %} class="field-{{ field.field.name }}"{% endif %}>
 											{{ field }}
-											{{ field.errors }}
+											{% if field.errors %}
+												<ul style="min-height: 30px;" class="errorlist">
+													{% for error in field.errors %}
+														<li>{{ error }}</li>
+													{% endfor %}
+												</ul>
+											{% endif %}
 										</td>
 										{% endfor %}
 								</tr>
