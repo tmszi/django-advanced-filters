@@ -284,7 +284,7 @@ class AdvancedFilterQueryForm(CleanWhiteSpacesMixin, forms.Form):
             if user.has_perm('can_edit_all_units'):
                 administrative_unit = user.administrated_units.all()
             else:
-                administrative_unit = user.administrated_units.first()
+                administrative_unit = [user.administrated_units.first()]
         if not kwargs.get('fake_query'):
             app = apps.get_app_config(kwargs['app_label'])
             for f in getattr(app.module.filters, 'AF_FILTERS'):
