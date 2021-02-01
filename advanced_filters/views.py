@@ -33,6 +33,8 @@ class GetFieldChoices(CsrfExemptMixin, StaffuserRequiredMixin,
                 {'error': "GetFieldChoices view requires 3 arguments"},
                 status=400)
         model_app_label, model_name = model.split('.', 1)
+        annotated_field = None
+        choices = None
         try:
             model_obj = apps.get_model(model_app_label, model_name)
             field = get_fields_from_path(model_obj, field_name)[-1]
@@ -48,15 +50,14 @@ class GetFieldChoices(CsrfExemptMixin, StaffuserRequiredMixin,
                 if (f.field == field_name and
                     f.model._meta.model_name == model_name):
                     break
-            field_filter = f()
+            field = f()
+            field.name = field.field
+            annotated_field = True
             try:
                 if request.user.has_perm('can_edit_all_units'):
                     administrative_unit = request.user.administrated_units.all()
                 else:
                     administrative_unit = request.user.administrated_units.first()
-                choices = list(field_filter.queryset(
-                    administrative_unit=administrative_unit,
-                ).distinct().values_list(f.field, f.field))
             except Exception as e:
                 logger.debug("Invalid kwargs passed to view: %s", e)
                 return self.render_json_response(
@@ -76,21 +77,21 @@ class GetFieldChoices(CsrfExemptMixin, StaffuserRequiredMixin,
                              field, type(field))
             else:
                 if field:
-                    # the order_by() avoids ambiguity with values() and distinct()
-                    choices = model_obj.objects.order_by(field.name).values_list(
-                        field.name, flat=True).distinct()
-                    # additional query is ok to avoid fetching too many values
-                    if choices.count() <= max_choices:
-                        choices = zip(choices, choices)
-                        logger.debug('Choices found for field %s: %s',
-                                     field.name, choices)
+                    if annotated_field:
+                        choices = field.queryset(
+                            administrative_unit=administrative_unit,
+                        ).order_by(field.name).values_list(
+                            field.name, flat=True).distinct()
                     else:
-                        choices = []
-                else:
-                    if len(choices) <= max_choices:
-                        choices = zip(choices, choices)
-                        logger.debug('Choices found for field %s: %s',
-                                     field_name, choices)
+                        # the order_by() avoids ambiguity with values() and distinct()
+                        choices = model_obj.objects.order_by(field.name).values_list(
+                            field.name, flat=True).distinct()
+                    # additional query is ok to avoid fetching too many values
+                    if choices:
+                        if choices.count() <= max_choices:
+                            choices = zip(choices, choices)
+                            logger.debug('Choices found for field %s: %s',
+                                         field.name, choices)
                     else:
                         choices = []
 
