@@ -118,6 +118,7 @@ var OperatorHandlers = function($) {
 				self.initialize_select2($(elm).parents('tr').find('.query-field'));
 			} else if (self.value != 'range') {
 				self.val_input.select2('destroy');
+				self.val_input.val('');
 			}
 		}
 	};
