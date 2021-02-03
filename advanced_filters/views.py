@@ -80,8 +80,10 @@ class GetFieldChoices(CsrfExemptMixin, StaffuserRequiredMixin,
                     if annotated_field:
                         choices = field.queryset(
                             administrative_unit=administrative_unit,
-                        ).order_by(field.name).values_list(
-                            field.name, flat=True).distinct()
+                        )
+                        if choices:
+                            choices = choices.order_by(field.name).values_list(
+                                field.name, flat=True).distinct()
                     else:
                         # the order_by() avoids ambiguity with values() and distinct()
                         choices = model_obj.objects.order_by(field.name).values_list(
