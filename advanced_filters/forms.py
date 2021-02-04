@@ -286,9 +286,15 @@ class AdvancedFilterQueryForm(CleanWhiteSpacesMixin, forms.Form):
             else:
                 administrative_unit = [user.administrated_units.first()]
         if not kwargs.get('fake_query'):
+            found = None
             app = apps.get_app_config(kwargs['app_label'])
             for f in getattr(app.module.filters, 'AF_FILTERS'):
                 if f.field in list(query_dict.keys())[0]:
+                    found = True
+                    if not administrative_unit:
+                        query_dict = {'id__in': list()}
+                        break
+
                     f_with_operator = list(query_dict.keys())[0].split('.')[-1]
                     q_value = list(query_dict.values())[0]
                     qd = {
@@ -320,6 +326,14 @@ class AdvancedFilterQueryForm(CleanWhiteSpacesMixin, forms.Form):
                             f.values_list_field, flat=True).distinct()
                     query_dict = {'id__in': list(result)}
                     break
+            if (not found and f.field not in
+                [i.name for i in f.model._meta.get_fields()]):
+                au = list(administrative_unit.values_list('id', flat=True))
+                if au:
+                    query_dict.update({
+                        'administrated_units__in': au,
+                    })
+
         if not negate:
             if 'negate' in self.cleaned_data and self.cleaned_data['negate']:
                 return query & ~Q(**query_dict)
